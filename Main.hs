@@ -17,7 +17,7 @@ main = do
     input <- newTChanIO
     output <- newBroadcastTChanIO
     forkIO . forever. atomically $ readTChan input >>= writeTChan output
-    runServer "127.0.0.1" 50100 $ handleConnection input output 
+    runServer "lambdasistemi.net" 50100 $ handleConnection input output 
         
 
 

@@ -36,7 +36,7 @@ main = mainWidget $ do
         return $ leftmost [newLogin,logout]
     divClass "message" $ do
         elClass "p" "head" $ text "Messaging"
-        rec     ws <- webSocket "ws://localhost:8080" $ def & webSocketConfig_send .~ leftmost [newMessage,user]
+        rec     ws <- webSocket "ws://lambdasistemi.net:50100" $ def & webSocketConfig_send .~ leftmost [newMessage,user]
                 receivedMessages <- foldDyn (\m ms -> tail ms ++ [m]) (replicate 10 "") $ _webSocket_recv ws
                 el "ul" $ simpleList receivedMessages $ \m -> el "li" $ mapDyn parseMessage m >>= domMorph ((never <$) . messageEl)
                 t <- do
