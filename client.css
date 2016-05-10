@@ -1,0 +1,47 @@
+body {margin:0em}
+.login {
+   background-color: #bbb;
+   margin-bottom: :0.5em;
+  padding:0.5em;
+}
+.head{
+  color:white;
+  background-color:#aaa;
+  padding:0.5em;
+  border-radius:0.2em;
+  }
+.message {
+   background-color: #bbc;
+  margin:0em;
+  padding:0.5em;
+}
+.sender {margin-right:0.5em;
+  color:white;
+  font-style:oblique;
+  font-size:0.9em;
+  width:6em;
+  display: inline-block;
+  }
+.content {margin:0.5em;
+  color:black;
+  font-size:1em;
+}
+li {
+   border-bottom: 1px solid white;
+  list-style: none;
+  background-color: #ccc;
+  margin-bottom:0.1em;
+  padding:0.1em;
+  padding-left:1em;
+}
+.problem {
+  font-style:oblique;
+  color:#559;
+  font-size:0.8em;
+}
+.error {
+  font-style:oblique;
+  color:#955;
+    font-size:0.8em;
+
+}
