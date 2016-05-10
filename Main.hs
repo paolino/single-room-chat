@@ -8,16 +8,18 @@ import Data.Text
 import Control.Monad.State
 
 import Protocol
+import System.Environment
 
 
 type Env = StateT (Maybe Text) IO
 
 main :: IO ()
 main = do
+    ip:po:_ <- getArgs
     input <- newTChanIO
     output <- newBroadcastTChanIO
     forkIO . forever. atomically $ readTChan input >>= writeTChan output
-    runServer "lambdasistemi.net" 50100 $ handleConnection input output 
+    runServer ip (read po) $ handleConnection input output 
         
 
 
