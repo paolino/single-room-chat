@@ -11,5 +11,6 @@ data MessageCore
     | Renick Text Text
     deriving (Show,Read)
 
+data Problem = NameTaken Text | GenericProblem Text deriving (Show,Read)
 
-data ClientMessage = Regular MessageCore | Problem Text deriving (Show,Read)
+data ClientMessage = Regular MessageCore | Problem Problem deriving (Show,Read)
