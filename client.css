@@ -11,26 +11,35 @@ body {margin:0em}
   border-radius:0.2em;
   }
 .message {
-   background-color: #bbc;
+   background-color;
   margin:0em;
   padding:0.5em;
+  padding-bottom:10em;
+}
+.talker{
+    color:blue;
+  font-style:oblique;
+  font-size:0.8em;
 }
 .sender {margin-right:0.5em;
-  color:white;
+  color:blue;
   font-style:oblique;
-  font-size:0.9em;
-  width:6em;
+  font-size:0.7em;
+  width:5em;
   display: inline-block;
+  text-align:right;
+  overflow:hidden
   }
 .content {margin:0.5em;
   color:black;
-  font-size:1em;
+  font-size:0.8em;
 }
 li {
-   border-bottom: 1px solid white;
+   border-bottom: 1px solid #ddd;
   list-style: none;
-  background-color: #ccc;
-  margin-bottom:0.1em;
+  background-color: #fff;
+  border-radius:0.2em;
+  margin-bottom:0em;
   padding:0.1em;
   padding-left:1em;
 }
@@ -45,3 +54,20 @@ li {
     font-size:0.8em;
 
 }
+button {
+    margin:0.1em;
+  border:1px solid lightgrey;
+  border-radius:0.2em;
+  padding:0.4em;
+  background-color: lightblue;
+}
+input {
+  margin:1em;
+  border:1px solid lightgrey;
+  border-radius:0.2em;
+  padding:0.4em;
+  }
+ul{padding-left:0.5em;
+  padding:0em;
+  margin:0em;
+  }

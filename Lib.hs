@@ -14,6 +14,7 @@ import Control.Monad.Identity (Identity)
 import qualified GHCJS.DOM.EventM as J
 import Data.IORef
 import Control.Monad.Trans
+import Control.Monad (join)
 
 
 -------  reflex missings --------------
@@ -22,6 +23,8 @@ type Morph t m a = Dynamic t (m a) -> m (Event t a)
 
 mapMorph  :: (MonadHold t m, Reflex t) => Morph t m (Event t b) -> (a -> m (Event t b)) -> Dynamic t a -> m (Event t b)
 mapMorph dyn f d = mapDyn f d >>= dyn >>= joinE
+
+mapMorph' dyn f d = mapDyn f d >>= dyn 
 
 joinE :: (Reflex t, MonadHold t f) => Event t (Event t a) -> f (Event t a)
 joinE = fmap switch . hold never
@@ -54,7 +57,14 @@ domMorph ::     MonadWidget t m
                 -> Dynamic t a           -- driver for rewritings
                 -> m (Event t b)         -- signal the happened rewriting
 domMorph = mapMorph dyn
+domMorph' = mapMorph' dyn
 
+ifMorph :: MS m => DS Bool -> m (ES a) -> m (ES a)
+ifMorph x d = domMorph f x where
+    f False = return never
+    f True = d
 -------------- create a Plug ----------
 mergeDSums :: GCompare a => [DSum a ES] -> Plug a
 mergeDSums = merge . DMap.fromList
+
+
