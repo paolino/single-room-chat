@@ -19,7 +19,7 @@ executable Server
   main-is:             Main.hs
   -- other-modules:       
   other-extensions:    OverloadedStrings, ViewPatterns
-  build-depends:       base >=4.8 && <4.9, websockets, bytestring, blaze-builder,text,stm,mtl,dependent-sum-th
+  build-depends:       base >=4.8 && <4.9, websockets, bytestring, blaze-builder,text,stm,mtl
   -- hs-source-dirs:      
   default-language:    Haskell2010
   ghc-options : -O2 -threaded

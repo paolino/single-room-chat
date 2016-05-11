@@ -4,6 +4,11 @@ import Data.Text
 
 data Protocol = Login Text | Message Text | Logout deriving Read
 
-data MessageFrom = MessageFrom Text Text deriving (Show,Read)
+data MessageCore 
+    = MessageFrom Text Text  
+    | Join Text
+    | Leave Text
+    deriving (Show,Read)
 
-data ClientMessage = Regular MessageFrom | Problem Text deriving (Show,Read)
+
+data ClientMessage = Regular MessageCore | Problem Text deriving (Show,Read)
