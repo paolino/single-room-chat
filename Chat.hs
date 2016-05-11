@@ -15,6 +15,11 @@ import Control.Monad (void)
 import Control.Monad.Trans (liftIO)
 import Control.Lens
 
+performArg :: MonadWidget t m => (b -> IO a) -> Event t b -> m (Event t a)
+performArg f x = performEvent (fmap (liftIO . f) x)
+
+focusNow t = getPostBuild >>= performArg (const $ focus (t ^. textInput_element))
+
 data MessageE a where
     NewMessage :: MessageE ByteString
     LogoutE :: MessageE ()
@@ -22,8 +27,6 @@ data MessageE a where
 deriveGEq ''MessageE
 deriveGCompare ''MessageE
 
-performArg :: MonadWidget t m => (b -> IO a) -> Event t b -> m (Event t a)
-performArg f x = performEvent (fmap (liftIO . f) x)
 
 encodeMessage = encodeUtf8 . T.pack 
 
@@ -55,8 +58,7 @@ messageBox  du = do
                     t <- textInput $ def & setValue .~ fmap (const "") newMessage
                     logoutE <- button "ReNick"
                     return (t,logoutE)
-                after <- delay 1 (updated du)
-                void $ performArg (const $ focus $ t ^. textInput_element) after
+                focusNow t
                 let newMessage = fmap (encodeMessage . ("Message " ++) . show) $ tag (current $ value t) $ textInputGetEnter t
         return $ mergeDSums [NewMessage :=> newMessage, LogoutE :=> logoutE]
 
@@ -76,9 +78,7 @@ main = mainWidget $ do
                                        elClass "span" "talker" $ text "Nick"
                                        textInput $ def & setValue .~ fmap (const "") loginE
                                     let  loginE = tag (current $ value t) $ textInputGetEnter t
-                                    
-                                    after <- delay 1 (pick LogoutE messageE)
-                                    void $ performArg (const $ focus $ t ^. textInput_element) after 
+                                    focusNow t
                                 return loginE
                             loggedD <- holdDyn False $ leftmost [True <$ loginE, False <$ pick LogoutE messageE]
                     userD <- holdDyn "" loginE

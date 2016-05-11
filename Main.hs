@@ -5,6 +5,7 @@ import Control.Concurrent.STM
 import Control.Concurrent
 import Control.Monad
 import Data.Text
+import qualified Data.Text as T
 import Control.Monad.State
 
 import Protocol
@@ -48,6 +49,7 @@ handleAction _ send (SetNick u) = do
                 Nothing -> send (Leave u')
     put u
     return True
+handleAction _ send (Accept (MessageFrom _ (T.null -> True))) = return True
 handleAction _ send (Accept m) = send m >> return True
 
 
