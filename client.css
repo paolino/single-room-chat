@@ -71,3 +71,8 @@ ul{padding-left:0.5em;
   padding:0em;
   margin:0em;
   }
+.action {
+  margin:0.5em;
+  color:lightpink;
+  font-size:0.7em;
+}

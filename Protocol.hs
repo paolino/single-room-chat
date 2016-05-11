@@ -8,6 +8,7 @@ data MessageCore
     = MessageFrom Text Text  
     | Join Text
     | Leave Text
+    | Renick Text Text
     deriving (Show,Read)
 
 

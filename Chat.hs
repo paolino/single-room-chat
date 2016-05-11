@@ -24,6 +24,12 @@ encodeMessage = encodeUtf8 . T.pack
 messageEl (Just (Regular (MessageFrom u m))) = do
     elClass "span" "sender" $ text (T.unpack u)
     elClass "span" "content" $ text (T.unpack m)
+messageEl (Just (Regular (Join u))) = do
+    elClass "span" "sender" $ text (T.unpack u)
+    elClass "span" "action" $ text "has joined"
+messageEl (Just (Regular (Leave u))) = do
+    elClass "span" "sender" $ text (T.unpack u)
+    elClass "span" "action" $ text "has leaved"
 messageEl (Just (Problem x)) = do
     elClass "span" "problem" $ text (T.unpack x)
 messageEl Nothing = elClass "span" "error" $ text $ "--"
@@ -32,13 +38,13 @@ renderMessage :: MS m => ByteString -> m ()
 renderMessage = el "li" . messageEl . readMaybe . T.unpack . decodeUtf8
 
 -- render messages and returns new messages
-messageBox :: MS m => DS String -> DS [ByteString] -> m (Plug MessageE)
-messageBox du receivedMessages  = do
-        rec     el "ul" $ domMorph' (mapM_ renderMessage ) receivedMessages 
+messageBox :: MS m => DS String  -> m (Plug MessageE)
+messageBox du = do
+        rec     
                 (t,logoutE) <- do
                     elClass "span" "talker" $ dynText du >> text " says:"
                     t <- textInput $ def & setValue .~ fmap (const "") newMessage
-                    logoutE <- button "Logout"
+                    logoutE <- button "ReNick"
                     return (t,logoutE)
                 let newMessage = fmap (encodeMessage . ("Message " ++) . show) $ tag (current $ value t) $ textInputGetEnter t
         return $ mergeDSums [NewMessage :=> newMessage, LogoutE :=> logoutE]
@@ -51,7 +57,9 @@ main :: IO ()
 main = mainWidget $ do
     el "style" $ text $(embedStringFile "client.css")
     divClass "message" $ do
-            rec (userE,loggedD,userD) <-  do
+            rec el "ul" $ domMorph' (mapM_ renderMessage ) receivedMessages 
+                messageE <- ifMorph loggedD $ messageBox userD
+                (userE,loggedD,userD) <-  do
                     rec     loginE <- mapDyn not loggedD >>= \nl -> ifMorph nl $ do  
                                 rec t <- do 
                                        elClass "span" "talker" $ text "Nick"
@@ -63,7 +71,6 @@ main = mainWidget $ do
                     let userE = leftmost [(encodeMessage . ("Login " ++) . show) <$> loginE] 
                     return $ (userE, loggedD,userD)
 
-                messageE <- ifMorph loggedD  $ messageBox userD receivedMessages
                 ws <- webSocket "ws://lambdasistemi.net:50100" $ def & singleWSSend (leftmost [pick NewMessage messageE,userE])
                 receivedMessages <- foldDyn (\m ms -> ms ++ [m]) [] $ _webSocket_recv ws
             return ()

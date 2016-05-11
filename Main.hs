@@ -43,10 +43,9 @@ handleAction _ send (SetNick u) = do
             Just u -> send (Join u)
             Nothing -> return ()
         Just u' -> do
-            send (Leave u') 
             case u of
-                Just u -> send (Join u)
-                Nothing -> return ()
+                Just u -> send (Renick u' u)
+                Nothing -> send (Leave u')
     put u
     return True
 handleAction _ send (Accept m) = send m >> return True
