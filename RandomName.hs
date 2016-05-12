@@ -14,7 +14,7 @@ worder =  do
     bs <- mmapFileByteString "words.txt" Nothing
     let pick = do
             n <- randomRIO (0,B.length bs - 100) 
-            let xs = filter (((&&) <$> (> 4) <*> (< 7)) . C.length) $ C.lines $  C.fromStrict $ B.drop n bs
+            let xs = filter (((&&) <$> (> 2) <*> (< 5)) . C.length) $ C.lines $  C.fromStrict $ B.drop n bs
             case xs of 
                 (x:y:_) -> return y
                 _ -> pick

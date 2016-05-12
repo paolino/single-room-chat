@@ -63,6 +63,7 @@ ifMorph :: MS m => DS Bool -> m (ES a) -> m (ES a)
 ifMorph x d = domMorph f x where
     f False = return never
     f True = d
+ifNotMorph w f = mapDyn not w >>= \t -> ifMorph t f
 -------------- create a Plug ----------
 mergeDSums :: GCompare a => [DSum a ES] -> Plug a
 mergeDSums = merge . DMap.fromList

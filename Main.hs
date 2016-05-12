@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings,ViewPatterns, ScopedTypeVariables#-}
+{-# LANGUAGE OverloadedStrings,ViewPatterns, ScopedTypeVariables,TemplateHaskell#-}
 
 import Network.WebSockets
 import Control.Concurrent.STM
@@ -8,12 +8,74 @@ import Data.Text hiding (filter)
 import qualified Data.Text as T
 import Control.Monad.Reader
 import Control.Exception
-
+import Control.Lens
+import Control.Lens.TH
 import Protocol
 import System.Environment
 import RandomName
 
-type Env = ReaderT (TVar Text) IO
+data UserState = UserState {
+    _listens :: [Text],
+    _name :: Text
+    }
+
+makeLenses ''UserState
+
+type Env = ReaderT (TVar UserState) IO
+
+        
+handleAction :: IO Text -> (Text -> Env ()) -> (Input -> Env ()) -> Output -> Env ()
+handleAction newName reply send Rename = do
+    u <- liftIO newName    
+    u' <- ask >>= \t -> liftIO . atomically $ do
+            u' <- view name <$> readTVar t
+            modifyTVar t $ set name u
+            return u'
+    send (Renick u' u)
+handleAction newName _ send (NewRoom mr desc) = do
+    r <- liftIO newName
+    u <- ask >>= \t -> liftIO $ atomically $ do
+            modifyTVar t . over listens $ (:) r
+            view name <$> readTVar t
+    send (Room u mr desc r)
+handleAction _ _ _ (Listen r) = ask >>= \t -> liftIO . atomically . modifyTVar t . over listens $ (:) r
+handleAction _ _ _ (Unlisten r) = ask >>= \t -> liftIO . atomically . modifyTVar t . over listens $ filter (/= r)
+
+handleAction _ _ send (Message _ (T.null -> True)) = return ()
+handleAction _ _ send (Message mr t) = do
+    u <- ask >>= \t -> liftIO $ atomically $ view name <$> readTVar t
+    send (MessageFrom u mr t) 
+
+handleOut send state  (e ::  ConnectionException) = atomically $ readTVar state >>= writeTChan send . Leave . view name
+
+handleConnection :: IO Text -> TChan Input -> TChan Input -> PendingConnection -> IO ()
+handleConnection newName send receive' pending = void $ do
+    receive <- atomically $ dupTChan receive'
+    name <- newName
+    state <- newTVarIO . UserState [] $ name
+    atomically $ writeTChan send (Join name)
+    connection <- acceptRequest pending
+    print "new"
+    handle (handleOut send state) $ do
+        forkIO . forever . join $ atomically $ do 
+            m <- readTChan receive
+            ls <- view listens <$> readTVar state
+            let t = case m of 
+                        MessageFrom _ (Just r) _ -> r `elem` ls
+                        _ -> True
+            if t then return (sendTextData connection . pack . show . Regular $ m) else return (return ())
+                    
+                    
+                    
+        void $ flip runReaderT state .forever $ do
+            m <- liftIO $ receiveData connection
+            case reads $ unpack m of
+                [(m,_)] -> handleAction newName
+                        (liftIO . sendTextData connection) 
+                        (liftIO . atomically . writeTChan send) m
+                _ -> liftIO $ sendTextData connection $ pack $ show $ Problem "Garbled input"
+         
+         
 
 main :: IO ()
 main = do
@@ -23,48 +85,3 @@ main = do
     forkIO . forever. atomically $ readTChan input >>= writeTChan output
     w <- worder
     runServer ip (read po) $ handleConnection w input output 
-        
-data Action = Accept MessageCore | ReNick | Fail Text | Exit
-
-parse :: Text -> Protocol -> Action
-parse u (Message t) = Accept (MessageFrom u t)
-parse _ Rename = ReNick 
-
-handleAction :: IO Text -> (Text -> Env ()) -> (MessageCore -> Env ()) -> Action -> Env Bool
-handleAction _ _ _ Exit = return False
-handleAction _ reply _ (Fail x) = do
-    reply  $ pack $ show $ Problem x
-    return True
-handleAction newName reply send ReNick = do
-    u <- liftIO newName    
-    u' <- ask >>= \t -> liftIO . atomically $do
-            u' <- readTVar t
-            writeTVar t u
-            return u'
-    send (Renick u' u)
-    return True
-
-handleAction _ _ send (Accept (MessageFrom _ (T.null -> True))) = return True
-handleAction _ _ send (Accept m) = send m >> return True
-
-handleOut send tname  (e ::  ConnectionException) = atomically $ readTVar tname >>= writeTChan send . Leave
-
-handleConnection :: IO Text -> TChan MessageCore -> TChan MessageCore -> PendingConnection -> IO ()
-handleConnection newName send receive' pending = void $ do
-    receive <- atomically $ dupTChan receive'
-    tname <- newName >>= newTVarIO 
-    connection <- acceptRequest pending
-    handle (handleOut send tname) $ do
-        forkIO . forever $ atomically (readTChan receive) >>= sendTextData connection . pack . show . Regular
-        void $ flip runReaderT tname .forever $ do
-            m <- liftIO $ receiveData connection
-            case reads $ unpack m of
-                [(m,_)] -> ask >>= liftIO . atomically . readTVar >>=  return . flip parse m >>= handleAction  newName
-                        (liftIO . sendTextData connection) 
-                        (liftIO . atomically . writeTChan send) 
-                _ -> do
-                    liftIO $ sendTextData connection $ pack $ show $ Problem "Garbled input"
-                    return True
-         
-         
-
