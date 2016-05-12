@@ -6,14 +6,14 @@ import Control.Concurrent
 import Control.Monad
 import Data.Text hiding (filter)
 import qualified Data.Text as T
-import Control.Monad.State
+import Control.Monad.Reader
 import Control.Exception
 
 import Protocol
 import System.Environment
+import RandomName
 
-
-type Env = StateT (Maybe Text) IO
+type Env = ReaderT (TVar Text) IO
 
 main :: IO ()
 main = do
@@ -21,76 +21,49 @@ main = do
     input <- newTChanIO
     output <- newBroadcastTChanIO
     forkIO . forever. atomically $ readTChan input >>= writeTChan output
-    names <- newTVarIO []
-    runServer ip (read po) $ handleConnection names input output 
+    w <- worder
+    runServer ip (read po) $ handleConnection w input output 
         
+data Action = Accept MessageCore | ReNick | Fail Text | Exit
 
+parse :: Text -> Protocol -> Action
+parse u (Message t) = Accept (MessageFrom u t)
+parse _ Rename = ReNick 
 
-data Action = Accept MessageCore | SetNick (Maybe Text) | Fail Text | Exit
-
-parse :: Maybe Text -> Protocol -> Action
-parse _ Logout = SetNick Nothing
-parse (Just u) (Message t) = Accept (MessageFrom u t)
-parse Nothing (Message t) = Fail "Set your nick!"
-parse _ (Login u) = SetNick (Just u)
-
-handleAction :: TVar [Text] -> (Text -> Env ()) -> (MessageCore -> Env ()) -> Action -> Env Bool
+handleAction :: IO Text -> (Text -> Env ()) -> (MessageCore -> Env ()) -> Action -> Env Bool
 handleAction _ _ _ Exit = return False
 handleAction _ reply _ (Fail x) = do
-    reply  $ pack $ show $ Problem (GenericProblem x)
+    reply  $ pack $ show $ Problem x
     return True
-handleAction names reply send (SetNick u) = do
-    r <- get
-    case r of 
-        Nothing -> case u of
-            Just u -> send (Join u)
-            Nothing -> return ()
-        Just u' -> do
-            case u of
-                Just u -> do
-                    result <- liftIO . atomically $ do
-                        ns <- readTVar names
-                        if u `elem` ns then return False
-                        else  do
-                            writeTVar names $ u : filter ((/=) u') ns
-                            return True
-                    if result then send (Renick u' u)
-                        else reply $ pack $ show $ Problem (NameTaken u)
+handleAction newName reply send ReNick = do
+    u <- liftIO newName    
+    u' <- ask >>= \t -> liftIO . atomically $do
+            u' <- readTVar t
+            writeTVar t u
+            return u'
+    send (Renick u' u)
+    return True
 
-                Nothing -> send (Leave u')
-    put u
-    return True
 handleAction _ _ send (Accept (MessageFrom _ (T.null -> True))) = return True
 handleAction _ _ send (Accept m) = send m >> return True
 
+handleOut send tname  (e ::  ConnectionException) = atomically $ readTVar tname >>= writeTChan send . Leave
 
-filterNames Nothing = id
-filterNames (Just u) = filter (/= u)
-
-handleOut send tname names (e ::  ConnectionException) = atomically $ do 
-    mn <- readTVar tname 
-    case mn of
-        Just n -> do    modifyTVar names $ filter (/= n)
-                        writeTChan send (Leave n)
-        Nothing -> return ()
-         
-
-
-handleConnection :: TVar [Text] -> TChan MessageCore -> TChan MessageCore -> PendingConnection -> IO ()
-handleConnection names send receive' pending = void $ do
+handleConnection :: IO Text -> TChan MessageCore -> TChan MessageCore -> PendingConnection -> IO ()
+handleConnection newName send receive' pending = void $ do
     receive <- atomically $ dupTChan receive'
-    tname <- newTVarIO Nothing
+    tname <- newName >>= newTVarIO 
     connection <- acceptRequest pending
-    handle (handleOut send tname names) $ do
+    handle (handleOut send tname) $ do
         forkIO . forever $ atomically (readTChan receive) >>= sendTextData connection . pack . show . Regular
-        void $ flip runStateT Nothing .forever $ do
+        void $ flip runReaderT tname .forever $ do
             m <- liftIO $ receiveData connection
             case reads $ unpack m of
-                [(m,_)] -> gets (flip parse m) >>= handleAction names 
+                [(m,_)] -> ask >>= liftIO . atomically . readTVar >>=  return . flip parse m >>= handleAction  newName
                         (liftIO . sendTextData connection) 
                         (liftIO . atomically . writeTChan send) 
                 _ -> do
-                    liftIO $ sendTextData connection $ pack $ show $ Problem (GenericProblem "Garbled input")
+                    liftIO $ sendTextData connection $ pack $ show $ Problem "Garbled input"
                     return True
          
          

@@ -22,7 +22,7 @@ focusNow t = getPostBuild >>= performArg (const $ focus (t ^. textInput_element)
 
 data MessageE a where
     NewMessage :: MessageE ByteString
-    LogoutE :: MessageE ()
+    NewName :: MessageE ()
 
 deriveGEq ''MessageE
 deriveGCompare ''MessageE
@@ -50,17 +50,17 @@ renderMessage :: MS m => ByteString -> m ()
 renderMessage = el "li" . messageEl . readMaybe . T.unpack . decodeUtf8
 
 -- render messages and returns new messages
-messageBox :: MS m =>  DS String  -> m (Plug MessageE)
+messageBox :: MS m =>  m (Plug MessageE)
 messageBox  du = do
         rec     
                 (t,logoutE) <- do
-                    elClass "span" "talker" $ dynText du >> text " says:"
+                    elClass "span" "talker" $  text "you say:"
                     t <- textInput $ def & setValue .~ fmap (const "") newMessage
-                    logoutE <- button "ReNick"
+                    logoutE <- (encodeMessage "Rename" <$) <$> button "ReNick"
                     return (t,logoutE)
                 focusNow t
                 let newMessage = fmap (encodeMessage . ("Message " ++) . show) $ tag (current $ value t) $ textInputGetEnter t
-        return $ mergeDSums [NewMessage :=> newMessage, LogoutE :=> logoutE]
+        return $ mergeDSums [NewMessage :=> newMessage, NewName :=> logoutE]
 
 
 singleWSSend :: Reflex t => Event t ByteString -> WebSocketConfig t -> WebSocketConfig t
@@ -71,20 +71,7 @@ main = mainWidget $ do
     el "style" $ text $(embedStringFile "client.css")
     divClass "message" $ do
             rec el "ul" $ domMorph' (mapM_ renderMessage ) receivedMessages 
-                messageE <- ifMorph loggedD $ messageBox userD
-                (userE,loggedD,userD) <-  do
-                    rec     loginE <- mapDyn not loggedD >>= \nl -> ifMorph nl $ do  
-                                rec t <- do 
-                                       elClass "span" "talker" $ text "Nick"
-                                       textInput $ def & setValue .~ fmap (const "") loginE
-                                    let  loginE = tag (current $ value t) $ textInputGetEnter t
-                                    focusNow t
-                                return loginE
-                            loggedD <- holdDyn False $ leftmost [True <$ loginE, False <$ pick LogoutE messageE]
-                    userD <- holdDyn "" loginE
-                    let userE = (encodeMessage . ("Login " ++) . show) <$> loginE
-                    return $ (userE, loggedD,userD)
-
-                ws <- webSocket "ws://lambdasistemi.net:50100" $ def & singleWSSend (leftmost [pick NewMessage messageE,userE])
+                messageE <- messageBox userD
+                ws <- webSocket "ws://lambdasistemi.net:50100" $ def & singleWSSend (leftmost [pick NewMessage messageE, pick NewName messageE])
                 receivedMessages <- foldDyn (\m ms -> ms ++ [m]) [] $ _webSocket_recv ws
             return ()
