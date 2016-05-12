@@ -54,10 +54,6 @@ messageEl ( (Regular (Leave u))) = do
     elClass "span" "sender" $ text (T.unpack u)
     elClass "span" "action" $ text "leaved"
     return Nothing
-messageEl ( (Regular (Renick u' u))) = do
-    elClass "span" "sender" $ text (T.unpack u')
-    elClass "span" "rename" $ text $ "is now called " ++ (T.unpack u)
-    return Nothing
 messageEl ( (Problem x)) = do
     elClass "span" "problem" $ text (T.unpack x)
     return Nothing

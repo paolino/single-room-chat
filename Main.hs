@@ -25,13 +25,6 @@ type Env = ReaderT (TVar UserState) IO
 
         
 handleAction :: IO Text -> (Text -> Env ()) -> (Input -> Env ()) -> Output -> Env ()
-handleAction newName reply send Rename = do
-    u <- liftIO newName    
-    u' <- ask >>= \t -> liftIO . atomically $ do
-            u' <- view name <$> readTVar t
-            modifyTVar t $ set name u
-            return u'
-    send (Renick u' u)
 handleAction newName _ send (NewRoom mr desc) = do
     r <- liftIO newName
     u <- ask >>= \t -> liftIO $ atomically $ do
@@ -55,7 +48,6 @@ handleConnection newName send receive' pending = void $ do
     state <- newTVarIO . UserState [] $ name
     atomically $ writeTChan send (Join name)
     connection <- acceptRequest pending
-    print "new"
     handle (handleOut send state) $ do
         forkIO . forever . join $ atomically $ do 
             m <- readTChan receive
