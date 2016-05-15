@@ -26,7 +26,7 @@ singleWSSend :: Reflex t => Event t ByteString -> WebSocketConfig t -> WebSocket
 singleWSSend m =  webSocketConfig_send .~ (return <$> m)
 
 host = "ws://lambdasistemi.net:50100"
--- host = "ws://192.168.1.119:50000"
+-- host = "ws://192.168.1.119:8000/ws"
 
 data Rooma = Rooma {
     _roomName :: T.Text,
@@ -64,9 +64,9 @@ renderMessage = el "li" . messageEl
 -- render messages and returns new messages
 messageBox :: MS m => m (ES String)
 messageBox = do
-        rec     t <- el "div" $ do
+        rec     t <- do
                         elClass "span" "talker" $  text "you say:"
-                        t <- textInput $ def & setValue .~ fmap (const "") newMessage
+                        t <- elClass "span" "input-text" $ textInput $ def & setValue .~ fmap (const "") newMessage
                         return t
                 focusNow t
                 let newMessage =  tag (current $ value t) (textInputGetEnter t)

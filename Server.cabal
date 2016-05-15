@@ -16,10 +16,10 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 executable Server
-  main-is:             Main.hs
+  main-is:             Snap.hs
   -- other-modules:       
   other-extensions:    OverloadedStrings, ViewPatterns
-  build-depends:       base >=4.8 && <4.9, websockets, bytestring, blaze-builder,text,stm,mtl,mmap,random,lens
+  build-depends:       base >=4.8 && <4.9, websockets, bytestring, blaze-builder,text,stm,mtl,mmap,random,lens,websockets-snap,snap-core,snap-server,crypto-api
   -- hs-source-dirs:      
   default-language:    Haskell2010
   ghc-options : -O2 -threaded

@@ -58,10 +58,11 @@ button {
     margin:0.1em;
   border:1px solid lightgrey;
   border-radius:0.2em;
-  padding:0.1em;
+  padding:0.2em;
   background-color: transparent;
     color:blueviolet;
   text-align:left;
+  padding-top:0.35em;
 }
 input {
   margin:1em;
@@ -122,9 +123,24 @@ ul{padding-left:0.5em;
 
   
 }
-.room-control span{
-  width:5em;
-  display: inline-block;
+.room-control{
+  display:flex;
+  margin:0.1em;
+}
+.talker{
+  width:6em;
+  overflow: auto;
+  display:flex;
+}
+.input-text{
+  background-color: #eee;
+  padding:0.1em;
+  display:flex;
+  width:100%;
+  
+}
+.input-text input{
+  width:100%;
 }
 .room-control input{
   margin: 0em;
@@ -133,7 +149,15 @@ ul{padding-left:0.5em;
   position:fixed;
   right:0.5em;
   top:0.3em;
+  background-color: white;
+  border-radius:1em;
+  border:1px solid white;
+
 }
 .rooms-switch button{
   color:white;
+  background-color: white;
+  color:#454;
+  border-radius:1em;
+  border:0.5em solid gray;
 }
